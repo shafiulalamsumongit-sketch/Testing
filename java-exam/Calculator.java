@@ -1,6 +1,5 @@
 public class Calculator {
 
-    // ── helper: validates that an Object input is a Number ───────
     private double toDouble(Object input, String label) {
         if (input == null) {
             throw new NullPointerException(
@@ -15,22 +14,19 @@ public class Calculator {
         return ((Number) input).doubleValue();
     }
 
-    // ── add ──────────────────────────────────────────────────────
     public double add(Object a, Object b) {
         return toDouble(a, "a") + toDouble(b, "b");
     }
 
-    // ── subtract ─────────────────────────────────────────────────
     public double subtract(Object a, Object b) {
         return toDouble(a, "a") - toDouble(b, "b");
     }
 
-    // ── multiply ─────────────────────────────────────────────────
     public double multiply(Object a, Object b) {
         return toDouble(a, "a") * toDouble(b, "b");
     }
 
-    // ── divide ───────────────────────────────────────────────────
+    
     public double divide(Object a, Object b) {
         double x = toDouble(a, "a");
         double y = toDouble(b, "b");
@@ -41,7 +37,7 @@ public class Calculator {
         return x / y;
     }
 
-    // ── main: create object, test all cases ──────────────────────
+  
     public static void main(String[] args) {
 
         Calculator calc = new Calculator();
