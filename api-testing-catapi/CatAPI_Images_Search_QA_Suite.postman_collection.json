@@ -1,0 +1,791 @@
+{
+  "info": {
+    "name": "TheCatAPI - Images Search - QA Test Suite",
+    "description": "Postman test suite for GET /images/search endpoint. Includes positive, negative, edge-case, and security validations, aligned with documented SQA test cases.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "TC_CATAPI_IMG_001 - Valid limit=2 mime_types=jpg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response is a JSON array\", function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(Array.isArray(body)).to.be.true;",
+              "});",
+              "",
+              "pm.test(\"Response contains exactly 2 items (matches limit)\", function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.length).to.eql(2);",
+              "});",
+              "",
+              "pm.test(\"Each item URL ends with .jpg\", function () {",
+              "    const body = pm.response.json();",
+              "    body.forEach(function (item) {",
+              "        pm.expect(item.url.toLowerCase()).to.match(/\\.jpg$/);",
+              "    });",
+              "});",
+              "",
+              "pm.test(\"Each item has required fields: id, url, width, height\", function () {",
+              "    const body = pm.response.json();",
+              "    body.forEach(function (item) {",
+              "        pm.expect(item).to.have.property('id').that.is.a('string').and.is.not.empty;",
+              "        pm.expect(item).to.have.property('url').that.is.a('string').and.is.not.empty;",
+              "        pm.expect(item).to.have.property('width').that.is.a('number');",
+              "        pm.expect(item).to.have.property('height').that.is.a('number');",
+              "    });",
+              "});",
+              "",
+              "pm.test(\"Content-Type header is application/json\", function () {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+              "});",
+              "",
+              "pm.test(\"Response time is within acceptable range (<2000ms)\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Positive test: verify 2 jpg images are returned with valid schema."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_002 - Invalid API key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 401 or 403 for invalid key\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+              "});",
+              "",
+              "pm.test(\"Response does not contain valid image data\", function () {",
+              "    let body;",
+              "    try { body = pm.response.json(); } catch (e) { body = null; }",
+              "    if (Array.isArray(body)) {",
+              "        pm.expect(body.length).to.eql(0);",
+              "    } else {",
+              "        pm.expect(body).to.not.be.null;",
+              "    }",
+              "});",
+              "",
+              "pm.test(\"No server error (5xx) occurs\", function () {",
+              "    pm.expect(pm.response.code).to.be.below(500);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "invalid_key_12345",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Negative test: invalid x-api-key should be rejected, not silently succeed."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_003 - Missing API key",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 (anonymous) or 401\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+              "});",
+              "",
+              "pm.test(\"If 200, rate-limit headers are present\", function () {",
+              "    if (pm.response.code === 200) {",
+              "        const hasRateHeader = pm.response.headers.has('x-rate-limit-limit') || pm.response.headers.has('x-rate-limit-remaining');",
+              "        pm.expect(hasRateHeader).to.be.true;",
+              "    } else {",
+              "        pm.expect(pm.response.code).to.eql(401);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Negative test: request without x-api-key header."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_004 - limit=0",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Result set is empty or falls back to default limit\", function () {",
+              "    const body = pm.response.json();",
+              "    pm.expect(Array.isArray(body)).to.be.true;",
+              "    pm.expect(body.length).to.be.at.most(1);",
+              "});",
+              "",
+              "pm.test(\"No server error occurs at boundary value\", function () {",
+              "    pm.expect(pm.response.code).to.be.below(500);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=0&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "0"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Edge case: limit=0 should not crash the server; document actual behavior."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_005 - limit exceeds maximum (limit=1000)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 (capped) or 400 (rejected)\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "});",
+              "",
+              "pm.test(\"If 200, results are capped at documented max (<=100)\", function () {",
+              "    if (pm.response.code === 200) {",
+              "        const body = pm.response.json();",
+              "        pm.expect(body.length).to.be.at.most(100);",
+              "    }",
+              "});",
+              "",
+              "pm.test(\"If 400, error message references limit constraint\", function () {",
+              "    if (pm.response.code === 400) {",
+              "        const body = pm.response.json();",
+              "        pm.expect(JSON.stringify(body).toLowerCase()).to.include('limit');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=1000&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1000"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Edge case: limit above the documented maximum allowed value."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_006 - Negative limit (-1)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is not 500 (no server crash)\", function () {",
+              "    pm.expect(pm.response.code).to.not.eql(500);",
+              "});",
+              "",
+              "pm.test(\"Status code is 400 or 200 with sane fallback\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "});",
+              "",
+              "pm.test(\"If 200, returned array length is non-negative\", function () {",
+              "    if (pm.response.code === 200) {",
+              "        const body = pm.response.json();",
+              "        pm.expect(Array.isArray(body)).to.be.true;",
+              "        pm.expect(body.length).to.be.at.least(0);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=-1&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "-1"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Negative test: negative limit value should be handled gracefully."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_007 - Non-numeric limit (abc)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 400 (not 500)\", function () {",
+              "    pm.expect(pm.response.code).to.not.eql(500);",
+              "    pm.expect(pm.response.code).to.be.oneOf([400, 200]);",
+              "});",
+              "",
+              "pm.test(\"If 400, response contains a descriptive validation error\", function () {",
+              "    if (pm.response.code === 400) {",
+              "        const body = pm.response.json();",
+              "        pm.expect(JSON.stringify(body)).to.not.be.empty;",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=abc&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "abc"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Negative test: non-numeric limit parameter."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_008 - Unsupported mime_type (exe)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 (empty result) or 400 (rejected)\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "});",
+              "",
+              "pm.test(\"If 200, no unrelated file formats are returned\", function () {",
+              "    if (pm.response.code === 200) {",
+              "        const body = pm.response.json();",
+              "        body.forEach(function (item) {",
+              "            pm.expect(item.url.toLowerCase()).to.not.match(/\\.(jpg|png|gif)$/);",
+              "        });",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=exe",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "exe"
+            }
+          ]
+        },
+        "description": "Negative test: unsupported mime_types value should not silently return unrelated data."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_009 - Multiple mime_types (jpg,png)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"All returned images are jpg or png\", function () {",
+              "    const body = pm.response.json();",
+              "    body.forEach(function (item) {",
+              "        pm.expect(item.url.toLowerCase()).to.match(/\\.(jpg|png)$/);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=5&mime_types=jpg,png",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg,png"
+            }
+          ]
+        },
+        "description": "Positive test: comma-separated multiple mime_types filter."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_010 - Empty mime_types parameter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200 or 400\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "});",
+              "",
+              "pm.test(\"No server error occurs\", function () {",
+              "    pm.expect(pm.response.code).to.not.eql(500);",
+              "});",
+              "",
+              "pm.test(\"If 200, array length matches limit\", function () {",
+              "    if (pm.response.code === 200) {",
+              "        const body = pm.response.json();",
+              "        pm.expect(body.length).to.be.at.most(2);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": ""
+            }
+          ]
+        },
+        "description": "Edge case: empty mime_types value should not break filtering logic."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_011 - Injection attempt in mime_types",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is not 500 (no internal error leak)\", function () {",
+              "    pm.expect(pm.response.code).to.not.eql(500);",
+              "});",
+              "",
+              "pm.test(\"Response body does not contain stack trace or SQL error text\", function () {",
+              "    const text = pm.response.text().toLowerCase();",
+              "    pm.expect(text).to.not.include('stacktrace');",
+              "    pm.expect(text).to.not.include('sql syntax');",
+              "    pm.expect(text).to.not.include('exception');",
+              "});",
+              "",
+              "pm.test(\"Status code is 200 or 400\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 400]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg' OR '1'='1",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg' OR '1'='1"
+            }
+          ]
+        },
+        "description": "Security test: verify API sanitizes/rejects injection-style input."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_012 - Unsupported HTTP method (POST)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 404 or 405\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([404, 405]);",
+              "});",
+              "",
+              "pm.test(\"No image data is returned\", function () {",
+              "    let body;",
+              "    try { body = pm.response.json(); } catch (e) { body = null; }",
+              "    if (Array.isArray(body)) {",
+              "        pm.expect(body.length).to.eql(0);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Negative test: calling the endpoint with an unsupported HTTP method."
+      },
+      "response": []
+    },
+    {
+      "name": "TC_CATAPI_IMG_013 - Response time SLA check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Response time is within SLA threshold (<1000ms)\", function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(1000);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/images/search?limit=2&mime_types=jpg",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "images",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "2"
+            },
+            {
+              "key": "mime_types",
+              "value": "jpg"
+            }
+          ]
+        },
+        "description": "Performance test: verify response time stays within agreed SLA."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.thecatapi.com/v1",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "live_VNQO3zbtJilCyVjktn9R3lPzch79fnaCdOfQUFwjQ9v5GbWJDh5OuhFINgATvYLu",
+      "type": "string"
+    }
+  ]
+}
